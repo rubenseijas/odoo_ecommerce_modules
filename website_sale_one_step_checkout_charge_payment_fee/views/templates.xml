@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+
+    <template id="assets_frontend" inherit_id="website.assets_frontend">
+        <xpath expr="." position="inside">
+            <link rel="stylesheet" type="text/less"
+				href="/website_sale_one_step_checkout_charge_payment_fee/static/src/css/checkout_charge_payment.less" />
+            <script type="text/javascript"
+                    src="/website_sale_one_step_checkout_charge_payment_fee/static/src/js/checkout_charge_payment.js"/>
+        </xpath>
+    </template>
+
+    <!--Show cash on delivery amount in cart total-->
+    <template id="cart_cash_on_delivery" inherit_id="website_sale.total" name="Cart Payment Fee Amount">
+        <xpath expr="//div[@id='order_total_untaxed']" position="before">
+            <div class="row" id="order_cash_on_delivery" t-if="website_sale_order and website_sale_order.has_cash_on_delivery">
+                <span class="col-xs-6 text-right text-muted"
+                      t-att-title="'Payment Fee Amount for %s will be updated after choosing a new payment method' % website_sale_order.payment_mode_id.name">Payment Fee:</span>
+                <span class="col-xs-6 text-left text-muted">
+                    <span t-field="website_sale_order.amount_cash_on_delivery" style="white-space: nowrap;"
+                          t-options='{"widget": "monetary", "display_currency": website_sale_order.currency_id}'/>
+                </span>
+            </div>
+        </xpath>
+    </template>
+
+    <!-- Hide cash on delivery, unsellable products (like coupons) and products packs from checkout review order table -->
+    <template id="cart_lines_cash_on_delivery" name="Shopping Cart Lines OSC Charge Payment Fee" inherit_id="website_sale.cart_lines">
+        <xpath expr="//table[@id='cart_products']//t[@t-foreach]" position="attributes">
+            <attribute name="t-foreach"
+                       t-if="not request.env['ir.ui.view'].search([('key', '=', 'checkout_coupon.website_sale_cart_lines')]).active">
+                website_sale_order.website_order_line.filtered(lambda x : x.product_id.sale_ok and not x.payment_fee_line and ('pack_parent_line_id' not in x or ('pack_parent_line_id' in x and not x.pack_parent_line_id)))
+            </attribute>
+        </xpath>
+    </template>
+
+    <!--Hide cash on delivery, unsellable products (like coupons) and products packs in cart popover -->
+    <template id="cart_popover_lines_cash_on_delivery" name="Cart Popover OSC Charge Payment Fee" inherit_id="website_sale.cart_popover">
+        <xpath expr="//t[@t-foreach]" position="attributes">
+            <attribute name="t-foreach"
+                       t-if="not request.env['ir.ui.view'].search([('key', '=', 'checkout_coupon.website_sale_cart_popover')]).active">
+                website_sale_order.website_order_line.filtered(lambda x : x.product_id.sale_ok and not x.payment_fee_line and ('pack_parent_line_id' not in x or ('pack_parent_line_id' in x and not x.pack_parent_line_id)))
+            </attribute>
+        </xpath>
+    </template>
+
+    <template id="website_sale_one_step_checkout_delivery_payment_delivery" name="Delivery Costs Payment Fee Charge" inherit_id="website_sale_one_step_checkout_delivery.payment_delivery">
+        <xpath expr="//div[@id='delivery_carrier_osc']" position="after">
+            <t t-if="not deliveries">
+                <!-- Something was wrong. -->
+                <div class="panel panel-danger border_primary">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Some Send Condition <strong>is not correct!</strong></h3>
+                    </div>
+                    <div class="panel-body">
+                        <p>Please, check all <strong>Send Conditions</strong> for order can be available to send.</p>
+                        <p>Please, check if you have your <strong>Billing Information</strong> and <strong>Shipping Address</strong> filled correctly too.</p>
+                        <t t-foreach="errors" t-as="error" t-if="errors">
+                            <div class="alert alert-danger" t-if="error">
+                                <h4>
+                                    <t t-esc="error[0]" />
+                                </h4>
+                                <t t-esc="error[1]" />
+                            </div>
+                        </t>
+                    </div>
+                    <!-- Dynamic url payment info. Use /page/payment-info as standard -->
+                    <t t-set="payment_page" t-value="request.env['website.menu'].search(['|', ('url', '=', '/page/pago-seguro'), ('url', '=', '/page/payment-info')], limit=1)"/>
+                    <div class="panel-footer" t-if="payment_page">
+                        <span>You can see all Send Conditions clicking <a t-att-href="payment_page.url" target="_blank" rel="nofollow,noindex"
+                                                                             title="Open Payment conditions into a new tab"
+                                                                             style="text-decoration: underline;">here</a>.
+                        </span>
+                    </div>
+                    <div class="panel-footer" t-else="">
+                        <span>Please, contact us if you wish more info about payment conditions</span>
+                    </div>
+                </div>
+            </t>
+        </xpath>
+    </template>
+
+    <!--OSC-->
+    <template id="website_sale_one_step_checkout_osc_onestepcheckout" inherit_id="website_sale_one_step_checkout.osc_onestepcheckout" name="OSC Payment Fee Charge">
+
+        <!-- Show error when just one acquirer is published and amounts conditions do not let select it -->
+        <xpath expr="//div[@id='payment_method']//h3" position="after">
+            <div class="row mt16" id="errors"
+                 t-if="(acquirers and len(acquirers) == 1 and all(
+                            (x.min_amount_required !=0 and x.min_amount_required &gt; website_sale_order.amount_total)
+                            or (x.max_amount_required !=0 and x.max_amount_required &lt; website_sale_order.amount_total)
+                            for x in acquirers or list()))
+                        or (acquirers and len(acquirers) &gt; 1 and all(
+                            (x.min_amount_required !=0 and x.min_amount_required &gt; website_sale_order.amount_total)
+                            or (x.max_amount_required !=0 and x.max_amount_required &lt; website_sale_order.amount_total)
+                        for x in acquirers or list()))
+                        or not website_sale_order.payment_mode_id">
+                <div class="col-sm-12" id="errors_content">
+                    <div class="alert alert-danger">
+                        <h4>
+                            There are not Payment Method selected
+                        </h4>
+                        You must select a payment method to continue process checkout. Select one or see Payment Method Info Panel for further info.
+                    </div>
+                </div>
+            </div>
+        </xpath>
+
+        <!--Adapt payment_acquirer_by_amount to OSC-->
+        <xpath expr="//div[@id='payment_method']//t[@t-foreach]/li" position="replace">
+            <t t-if="(not acquirer.min_amount_required and not acquirer.max_amount_required)
+                         or (
+                            (acquirer.min_amount_required !=0 and acquirer.min_amount_required &lt; website_sale_order.amount_total and acquirer.max_amount_required &gt; website_sale_order.amount_total)
+                            or (not acquirer.max_amount_required and acquirer.min_amount_required !=0 and acquirer.min_amount_required &lt; website_sale_order.amount_total)
+                            or (not acquirer.min_amount_required and acquirer.max_amount_required !=0 and acquirer.max_amount_required &gt; website_sale_order.amount_total)
+                            )">
+                <label t-if="acquirer.button">
+                    <input t-att-value="acquirer.id"
+                           type="radio"
+                           name="acquirer"
+                           t-att-checked="website_sale_order.payment_acquirer_id == acquirer"/>
+                    <span t-field="acquirer.image_small"
+                          t-att-title="acquirer.name"
+                          t-field-options='{"widget": "image", "style":"max-width: 60px; display: inline-block"}'/>
+                    <span t-field="acquirer.name"/>
+                    <span t-if="acquirer.fees_active">(processing fees apply)
+                    </span>
+                </label>
+            </t>
+        </xpath>
+
+        <!--Warning for choose a payment method if none is checked-->
+        <xpath expr="//div[@id='payment_method']" position="after">
+            <!-- Just if amounts are established for any acquirer -->
+            <div id="payment_method_info" t-if="(acquirers and len(acquirers) == 1 and any(((x.min_amount_required !=0 and x.min_amount_required &gt; website_sale_order.amount_total)
+                                                    or (x.max_amount_required !=0 and x.max_amount_required &lt; website_sale_order.amount_total)
+                                                ) for x in acquirers or list()))
+                                                or (acquirers and len(acquirers) &gt; 1 and any(((x.min_amount_required !=0 and x.min_amount_required &gt; website_sale_order.amount_total)
+                                                    or (x.max_amount_required !=0 and x.max_amount_required &lt; website_sale_order.amount_total)
+                                                ) for x in acquirers or list()))">
+                <h3 class="page-header mt8">Payment Method Info</h3>
+                <div class="panel panel-default border_primary">
+                    <div class="panel-body" id="payment_body_info">
+                        <p class="text-danger" t-if="not website_sale_order.payment_acquirer_id"><strong>You must select a payment method to continue process checkout</strong></p>
+                        <!-- Show info just for acquirer which amounts are established-->
+                        <t t-foreach="acquirers or list()" t-as="acquirer" t-if="acquirers and len(acquirers) == 1 or website_sale_order.payment_acquirer_id.id or website_sale_order.payment_acquirer_id.id != acquirer.id">
+                            <p t-if="(acquirer.min_amount_required !=0 and acquirer.min_amount_required &gt; website_sale_order.amount_total)
+                                        or (acquirer.max_amount_required !=0 and acquirer.max_amount_required &lt; website_sale_order.amount_total)">
+                                For select a <strong>"<u><span t-esc="acquirer.name"/></u>"</strong> payment method, the total amount must be
+                                <span t-if="acquirer.max_amount_required and acquirer.max_amount_required &gt; 0">between</span>
+                                <span t-else="">over</span>
+                                <span t-esc="'%s %s' % (acquirer.min_amount_required, '€')"/>
+                                <t t-if="acquirer.max_amount_required and acquirer.max_amount_required &gt; 0">
+                                    and <span t-esc="'%s %s' % (acquirer.max_amount_required, '€')"/>
+                                </t>
+                            </p>
+                        </t>
+                        <!-- Pagantis -->
+                        <t t-if="request.env['payment.acquirer'].search([('website_published', '=', True), ('company_id', '=', order.company_id.id), ('provider', '=', 'pmt')])">
+                            <p>
+                                <!-- Retrive Javascript SDK from CDN -->
+                                <script type="text/javascript" src="https://cdn.pagamastarde.com/pmt-js-client-sdk/3/js/client-sdk.min.js"/>
+                                <!-- Create simulator container -->
+                                <div class="PmtSimulator"
+                                     data-pmt-style="Blue"
+                                     data-pmt-type="6"
+                                     data-pmt-num-quota="12"
+                                     t-att-data-pmt-amount="website_sale_order.amount_total"
+                                     t-att-data-pmt-promoted-amount="0">
+                                </div>
+                                <!-- Set Public Key and reload simulator -->
+                                <t t-set="pmt" t-value="request.env['payment.acquirer'].sudo().search([('website_published', '=', True), ('company_id', '=', order.company_id.id), ('provider', '=', 'pmt')])"/>
+                                <script>
+                                    pmtClient.simulator.setPublicKey('<t t-esc="pmt.pmt_public_key"/>');
+                                    pmtClient.simulator.init();
+                                    pmtClient.simulator.reload();
+                                </script>
+                            </p>
+                            <button class="btn btn-block btn-primary"
+                                    onclick="pmtClient.modal.open('https://developer.pagamastarde.com/marketing-landing/es/',
+                                        {'closeConfirmationMessage': null, 'largeSize': true});">Ver Instrucciones Pagantis</button>
+                        </t>
+                    </div>
+                    <!-- Dynamic url payment info. Use /page/payment-info as standard -->
+                    <t t-set="payment_page" t-value="request.env['website.menu'].search(['|', ('url', '=', '/page/pago-seguro'), ('url', '=', '/page/payment-info')], limit=1)"/>
+                    <div class="panel-footer" t-if="payment_page">
+                        <span>You can see all payment conditions clicking <a t-att-href="payment_page.url" target="_blank" rel="nofollow,noindex"
+                                                                             title="Open Payment conditions into a new tab"
+                                                                             style="text-decoration: underline;">here</a>.
+                        </span>
+                    </div>
+                    <div class="panel-footer" t-else="">
+                        <span>Please, contact us if you wish more info about payment conditions</span>
+                    </div>
+                </div>
+            </div>
+        </xpath>
+
+        <!--Hide cash on delivery order line and products packs in review order-->
+        <xpath expr="//table[@id='cart_products']//tbody/tr" position="attributes">
+            <attribute name="t-foreach">website_sale_order.website_order_line.filtered(lambda x : x.product_id.sale_ok and not x.payment_fee_line and ('pack_parent_line_id' not in x or ('pack_parent_line_id' in x and not x.pack_parent_line_id)))</attribute>
+        </xpath>
+
+        <!-- Add discount coupon input in OSC -->
+        <xpath expr="//table[@id='cart_products']" position="after">
+            <t t-if="request.website.use_osc_coupon">
+                <div t-if="not order.applied_coupon" class="wp-checkout-coupon">
+                    <h4>Have a discount coupon?</h4>
+                    <p>Put it in this field and apply</p>
+                    <form method="post" id="to_checkout">
+                        <input type="hidden" name="csrf_token"/>
+                        <div class="input-group">
+                            <input name="coupon_code" type="text" placeholder="Coupon code" class="form-control"/>
+                            <div class="input-group-btn">
+                                <a class="btn btn-default a-submit">Apply</a>
+                            </div>
+                        </div>
+                        <div class="coupon-message"/>
+                    </form>
+                </div>
+                <div t-else="order.applied_coupon" class="wp-checkout-coupon">
+                    <h4>You have a coupon applied</h4>
+                    <form method="post" id="to_remove">
+                        <div class="input-group">
+                            <input name="coupon_code" type="text" readonly="readonly" disable="disable" class="form-control"
+                                   t-att-value="order.applied_coupon.code"/>
+                            <div class="input-group-btn">
+                                <a class="btn a-submit btn-remove">Remove</a>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="coupon-message">
+                        <div class="info"><strong>It will be eliminated if modify the cart</strong></div>
+                    </div>
+                </div>
+            </t>
+        </xpath>
+
+        <!-- Show errors if exist -->
+        <xpath expr="//div[hasclass('js_payment')]" position="before">
+            <div class="row mt16" t-if="errors">
+                <div class="col-sm-12">
+                    <t t-foreach="errors" t-as="error">
+                        <div class="alert alert-danger" t-if="error">
+                            <h4>
+                                <t t-esc="error[0]" />
+                            </h4>
+                            <t t-esc="error[1]" />
+                        </div>
+                    </t>
+                </div>
+            </div>
+        </xpath>
+
+    </template>
+
+    <!--Replace Configure button text from only transfer use to a generic payment acquirer-->
+    <template id="order_state_message_custom" inherit_id="website_sale.order_state_message" name="Order State Message Custom">
+        <xpath expr="//a[@class='btn btn-primary pull-right']" position="replace">
+            <a class="btn btn-primary pull-right" target="_blank" t-att-href="'/web#model=%s&amp;id=%s&amp;action=%s&amp;view_type=form' % ('payment.acquirer',acquirer_id.id, 'payment.action_payment_acquirer')">
+                <i class="fa fa-cog"/> Configure Transaction Details</a>
+        </xpath>
+    </template>
+
+</odoo>

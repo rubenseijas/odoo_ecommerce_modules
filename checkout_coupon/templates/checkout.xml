@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+
+        <!-- Coupon Form in OSC CHECKOUT -->
+<!--    <template id="website_sale_one_step_checkout_osc_onestepcheckout" name="One Step Checkout Coupon" inherit_id="website_sale_one_step_checkout.osc_onestepcheckout">-->
+
+<!--        &lt;!&ndash; Add discount coupon input in OSC page &ndash;&gt;-->
+<!--        <xpath expr="//table[@id='cart_products']" position="after">-->
+<!--            <t t-if="request.website.use_osc_coupon and not request.env['ir.ui.view'].search([('key', '=', 'website_sale_one_step_checkout_charge_payment_fee.website_sale_one_step_checkout_osc_onestepcheckout')]).active">-->
+<!--                <div t-if="not order.applied_coupon" class="wp-checkout-coupon">-->
+<!--                    <h4>Have a discount coupon?</h4>-->
+<!--                    <p>Put it in this field and apply</p>-->
+<!--                    <form method="post" id="to_checkout">-->
+<!--                        <input type="hidden" name="csrf_token"/>-->
+<!--                        <div class="input-group">-->
+<!--                            <input name="coupon_code" type="text" placeholder="Coupon code" class="form-control"/>-->
+<!--                            <div class="input-group-btn">-->
+<!--                                <a class="btn btn-default a-submit">Apply</a>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                        <div class="coupon-message"/>-->
+<!--                    </form>-->
+<!--                </div>-->
+<!--                <div t-else="order.applied_coupon" class="wp-checkout-coupon">-->
+<!--                    <h4>You have a coupon applied</h4>-->
+<!--                    <form method="post" id="to_remove">-->
+<!--                        <div class="input-group">-->
+<!--                            <input name="coupon_code" type="text" readonly="readonly" disable="disable" class="form-control"-->
+<!--                                   t-att-value="order.applied_coupon.code"/>-->
+<!--                            <div class="input-group-btn">-->
+<!--                                <a class="btn a-submit btn-remove">Remove</a>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </form>-->
+<!--                    <div class="coupon-message">-->
+<!--                        <div class="info"><strong>It will be eliminated if modify the cart</strong></div>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </t>-->
+<!--        </xpath>-->
+
+<!--        &lt;!&ndash; Hide unsellable products (coupons) on delivery order line in review order&ndash;&gt;-->
+<!--        <xpath expr="//table[@id='cart_products']//tbody/tr" position="attributes">-->
+<!--            <attribute name="t-foreach" t-if="not request.env['ir.ui.view'].search([('key', '=', 'website_sale_one_step_checkout_charge_payment_fee.website_sale_one_step_checkout_osc_onestepcheckout')]).active">-->
+<!--                website_sale_order.website_order_line.filtered(lambda x : x.product_id.sale_ok and not x.payment_fee_line and ('pack_parent_line_id' not in x or ('pack_parent_line_id' in x and not x.pack_parent_line_id)))-->
+<!--            </attribute>-->
+<!--        </xpath>-->
+
+<!--    </template>-->
+
+    <!-- Coupon Form in DEFAULT CHECKOUT -->
+    <template id="website_sale_payment" name="Payment Coupon" inherit_id="website_sale.payment">
+
+        <xpath expr="//table[@id='cart_products']" position="after">
+            <div t-if="not order.applied_coupon and request.website.use_osc_coupon" class="wp-checkout-coupon mb16 col-sm-4 col-sm-offset-8 col-xs-12" style="width: fit-content;">
+                <h4>Have a discount coupon?</h4>
+                <p>Put it in this field and apply</p>
+                <form method="post" id="to_checkout">
+                    <input type="hidden" name="csrf_token"/>
+                    <div class="input-group">
+                        <input name="coupon_code" type="text" placeholder="Coupon code" class="form-control"/>
+                        <div class="input-group-btn">
+                            <a class="btn btn-default a-submit">Apply</a>
+                        </div>
+                    </div>
+                    <div class="coupon-message"/>
+                </form>
+            </div>
+            <div t-else="order.applied_coupon" class="wp-checkout-coupon">
+                <h4>You have a coupon applied</h4>
+                <form method="post" id="to_remove">
+                    <div class="input-group">
+                        <input name="coupon_code" type="text" readonly="readonly" disable="disable" class="form-control"
+                               t-att-value="order.applied_coupon.code"/>
+                        <div class="input-group-btn">
+                            <a class="btn a-submit btn-remove">Remove</a>
+                        </div>
+                    </div>
+                </form>
+                <div class="coupon-message">
+                    <div class="info"><strong>It will be eliminated if modify the cart</strong></div>
+                </div>
+            </div>
+        </xpath>
+
+        <!-- Hide unsellable products (coupons) on delivery order line in review order-->
+        <xpath expr="//table[@id='cart_products']//tbody/tr" position="attributes">
+            <attribute name="t-foreach">
+                website_sale_order.website_order_line.filtered(lambda x : x.product_id.sale_ok and not x.payment_fee_line and ('pack_parent_line_id' not in x or ('pack_parent_line_id' in x and not x.pack_parent_line_id)))
+            </attribute>
+        </xpath>
+
+    </template>
+
+    <!--Hide unsellable products (coupons), cash on delivery order line and products packs on delivery order line in cart-->
+    <template id="website_sale_cart_lines" name="Shopping Cart Lines Checkout Coupon" inherit_id="website_sale.cart_lines">
+        <xpath expr="//tbody/t" position="attributes">
+            <attribute name="t-foreach">website_sale_order.website_order_line.filtered(lambda x : x.product_id.sale_ok and not x.payment_fee_line and ('pack_parent_line_id' not in x or ('pack_parent_line_id' in x and not x.pack_parent_line_id)))</attribute>
+        </xpath>
+    </template>
+
+    <!--Hide unsellable products (coupons), cash on delivery order line and products packs on delivery order line in cart popover and total items control-->
+    <template id="website_sale_cart_popover" name="Cart Popover Checkout Coupon" inherit_id="website_sale.cart_popover">
+        <xpath expr="//t[@t-foreach]" position="attributes">
+            <attribute name="t-foreach">website_sale_order.website_order_line.filtered(lambda x : x.product_id.sale_ok and not x.payment_fee_line and ('pack_parent_line_id' not in x or ('pack_parent_line_id' in x and not x.pack_parent_line_id)))</attribute>
+        </xpath>
+    </template>
+
+    <!-- Add load spinner block -->
+    <template id="checkout_loader_add" inherit_id="website.layout">
+        <xpath expr="//div[@id='wrapwrap']" position="inside">
+            <div class="wp">
+                <div class="wp-checkout-loader">
+                    <div class="checkout-loader">
+                        <div class="checkout-loader-spinner"/>
+                    </div>
+                </div>
+            </div>
+        </xpath>
+    </template>
+
+    <!-- Total cart discount summary line -->
+    <template id="discount_cart_total" inherit_id="website_sale.total">
+        <xpath expr="//div[@id='order_total_untaxed']" position="before">
+            <div class="row discount-line" id="order_total_discount"
+                 t-if="website_sale_order.total_coupon_discount and website_sale_order.applied_coupon and website_sale_order.applied_coupon.is_active">
+                <span class="col-xs-6 text-right text-muted"><strong>Coupon:</strong></span>
+                <span class="col-xs-6 text-right text-muted total-coupon-discount">
+                    <strong>
+                        <span t-field="website_sale_order.total_coupon_discount" style="white-space: nowrap;"
+                          t-options='{"widget": "monetary","display_currency": website_sale_order.currency_id,}'/>
+                    </strong>
+                </span>
+            </div>
+        </xpath>
+    </template>
+
+</odoo>
