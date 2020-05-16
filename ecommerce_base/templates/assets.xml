@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+
+    <!-- Changes for footer main part (website/views/website_templates.xml) -->
+    <template id="website_layout" name="Main layout eCommerce Base" inherit_id="website.layout">
+        <xpath expr="//footer" position="after">
+            <script src="/ecommerce_base/static/js/jquery.validate.min.js" type="text/javascript"/>
+        </xpath>
+    </template>
+
+</odoo>
