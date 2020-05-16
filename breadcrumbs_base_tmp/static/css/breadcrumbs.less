@@ -1,0 +1,28 @@
+/* Define this variables in your archive css to override them */
+// :root {
+//     --color-bg: you_color or #fff;
+//     --color-href: you_color or #337ab7;
+//     --color-current: you_color or #777;
+// }
+
+.wp_breadcrumbs_base {
+    background-color: var(--color-bg, #fff);
+}
+.breadcrumbs_base {
+
+    & ol.breadcrumb {
+        background-color: var(--color-bg, #fff);
+        margin-bottom: 0;
+        & a {
+            color: var(--color-href, #337ab7);
+        }
+        & span {
+            color: var(--color-current, #777);
+        }
+    }
+}
+
+// Fix default padding for same space between crumbs
+.breadcrumb > li + li:before {
+  padding: 0px 0px 0px 5px;
+}
